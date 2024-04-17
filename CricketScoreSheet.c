@@ -18,6 +18,7 @@ struct team{
         int wickets;
         int bat_status;
         int ball_status;
+        int out_status;
     }p[11];
     int extras;
     int total_runs;
@@ -40,6 +41,7 @@ void initializePlayers(struct team *t) {
         t->p[i].wickets = 0;
         t->p[i].bat_status = 0;
         t->p[i].ball_status = 0;
+        t->p[i].out_status = 0;
     }
     t->extras = 0;
     t->total_runs = 0;
@@ -113,7 +115,7 @@ int change_baller(struct team **t){
 void innings(int totalover, struct team *tbat, struct team *tball) {
 
     // build inning, update structure member value, perform all major logic
-
+    int target= tball->total_runs;
     int batsmanNo = 1;
     int strike=0;
     int non_strike=1;
@@ -132,6 +134,9 @@ void innings(int totalover, struct team *tbat, struct team *tball) {
     while (ballsrem > 0 && wickets < 11) {
 
         //display live score in console
+        if (target!=0){
+          printf("Target: %d\n\n",target);
+        }
         printf("%s: %d/%d", tbat->team_name, tbat->total_runs, wickets);// batting team name, total runs and wickets
         printf("\tOver:%d.%d\n", (ballsplayed / 6), (ballsplayed % 6));// over balled
 
@@ -188,14 +193,21 @@ void innings(int totalover, struct team *tbat, struct team *tball) {
             ballsplayed++;
             ballsrem--;
 
+            tbat->p[batsmanNo].out_status++;
             batsmanNo++;// change batsman
             strike=batsmanNo;// give strikes to new batsman
             tbat->p[batsmanNo].bat_status++;// update bat_status, that ensure batsman has entered in field
 
             tbat->total_wickets++;// update total wickets
         }
-
         system("cls");
+
+        if (target!=0 && tbat->total_runs>=target){
+
+                break;
+        }
+
+
 
         // over changed
         if (ballsplayed % 6 == 0 && ballsrem!=0) {
@@ -214,7 +226,7 @@ void printBattingSummaryToTextFile(struct team *t, FILE *file) {
     // table heading
     fprintf(file, "Batting Performance of %s\n", t->team_name);
     fprintf(file, "-----------------------------------------------------------------\n");
-    fprintf(file, "| %-11s | %-6s | %-6s | %-6s | %-6s | %-10s|\n",
+    fprintf(file, "| %-12s | %-6s | %-6s | %-6s | %-6s | %-10s|\n",
             "Player Name", "Runs", "Balls", "Fours", "Sixes", "Strike Rate");
     fprintf(file, "-----------------------------------------------------------------\n");
 
@@ -226,25 +238,32 @@ void printBattingSummaryToTextFile(struct team *t, FILE *file) {
 
             float strike_rate = (float)t->p[i].runs / t->p[i].balls_faced * 100.0;
 
-            fprintf(file,"| %-11s | %-6d | %-6d | %-6d | %-6d | %-10.2f |\n",t->p[i].name, t->p[i].runs, t->p[i].balls_faced, t->p[i].fours, t->p[i].sixes, strike_rate);
+            if(t->p[i].out_status==0){
+                fprintf(file,"| *%-11s | %-6d | %-6d | %-6d | %-6d | %-10.2f |\n",t->p[i].name, t->p[i].runs, t->p[i].balls_faced, t->p[i].fours, t->p[i].sixes, strike_rate);
+
+            }
+
+            else{
+                fprintf(file,"|  %-11s | %-6d | %-6d | %-6d | %-6d | %-10.2f |\n",t->p[i].name, t->p[i].runs, t->p[i].balls_faced, t->p[i].fours, t->p[i].sixes, strike_rate);
+            }
 
         }
 
         //else print did not bat
         else{
-            fprintf(file,"| %-11s | %-46s |\n",t->p[i].name,"did not bat");
+            fprintf(file,"|  %-11s | %-46s |\n",t->p[i].name,"did not bat");
         }
 
     }
 
-    fprintf(file, "\n-----------------------------------------------------------------\n");
+    fprintf(file, "-----------------------------------------------------------------\n");
 }
 
 // print balling stats
 void printBowlingSummaryToTextFile(struct team *t, FILE *file) {
 
     // table heading
-    fprintf(file, "Bowling Performance of %s\n", t->team_name);
+    fprintf(file, "\nBowling Performance of %s\n", t->team_name);
     fprintf(file, "-----------------------------------------------------------------\n");
     fprintf(file, "| %-11s | %-6s | %-6s | %-6s | %-6s |\n",
             "Player Name", "Wickets", "Runs", "Overs", "Economy");
@@ -254,8 +273,10 @@ void printBowlingSummaryToTextFile(struct team *t, FILE *file) {
 
         // print stats who has balled
         if (t->p[i].ball_status != 0){
-            float overs = (float) t->p[i].balls_thrown/6+ (t->p[i].balls_thrown%6)*0.1;
-            float economy = (float)(t->p[i].runs_given/t->p[i].balls_thrown)*6;
+
+            float overs = t->p[i].balls_thrown/6+ (t->p[i].balls_thrown%6)*0.1;
+            float economy =((float)t->p[i].runs_given/t->p[i].balls_thrown)*6;
+
             fprintf(file, "| %-11s | %-7d | %-6d | %-6.1f | %-7.2f |\n",
                 t->p[i].name, t->p[i].wickets, t->p[i].runs_given,overs,economy);
         }
