@@ -5,7 +5,7 @@
 struct team{
     char team_name[25];
     struct player{
-        char name[10];
+        char name[49];
         int runs;
         int balls_faced;
         int sixes;
@@ -23,6 +23,7 @@ struct team{
     int extras;
     int total_runs;
     int total_wickets;
+    int toss;
 }t1,t2;
 
 void initializePlayers(struct team *t) {
@@ -46,6 +47,7 @@ void initializePlayers(struct team *t) {
     t->extras = 0;
     t->total_runs = 0;
     t->total_wickets = 0;
+    t->toss=0;
 }
 
 int inputscore(){
@@ -65,12 +67,24 @@ int inputscore(){
             printf("0 for dotball\n1 for single\n2 for double\n3 for triples\n4 for four\n6 for sixes\n7 for wicket\n\n->");
             scanf("%d",&temp);
 
-            return temp;
+            do{
+
+                if(temp>=0 && temp<=7){
+                    return temp;
+                    break;
+                }
+
+                printf("This Input Is Not Acceptable!!\nTry Again\n->");
+                scanf("%d",&temp);
+
+            }while(temp<0||temp>7);
+
             break;
+
 
         case 2:
 
-            temp=8;
+            temp=-1;
 
             return temp;
             break;
@@ -81,6 +95,7 @@ int inputscore(){
             inputscore();// if invalid input, again call function unless input if valid
     }
 }
+
 void strike_rotate(int *strike, int *non_strike){
 
     // swap strike and non strike value to rotate strike
@@ -93,7 +108,7 @@ void strike_rotate(int *strike, int *non_strike){
 int change_baller(struct team **t){
 
     //shows the list of baller to change, at end of the over
-    int input;
+    int input=-99;
 
     printf("choose Baller\n");
 
@@ -105,17 +120,22 @@ int change_baller(struct team **t){
     printf("\n->");
     scanf("%d",&input);
 
+    while(input>11 || input<1){
+        printf("WRONG INPUT!!");
+        printf("\n->");
+        scanf("%d",&input);
+    }
     system("cls");
 
-    (*t)->p[input-1].ball_status++;// update ball_status, either player has balled or not in the game
+        (*t)->p[input-1].ball_status++;// update ball_status, either player has balled or not in the game
+        return (input-1);
 
-    return (input-1);
 }
 
 void innings(int totalover, struct team *tbat, struct team *tball) {
 
     // build inning, update structure member value, perform all major logic
-    int target= tball->total_runs;
+    int target= tball->total_runs+1;
     int batsmanNo = 1;
     int strike=0;
     int non_strike=1;
@@ -134,11 +154,11 @@ void innings(int totalover, struct team *tbat, struct team *tball) {
     while (ballsrem > 0 && wickets < 11) {
 
         //display live score in console
-        if (target!=0){
+        if (target!=1){
           printf("Target: %d\n\n",target);
         }
         printf("%s: %d/%d", tbat->team_name, tbat->total_runs, wickets);// batting team name, total runs and wickets
-        printf("\tOver:%d.%d\n", (ballsplayed / 6), (ballsplayed % 6));// over balled
+        printf("\nOver:%d.%d\n", (ballsplayed / 6), (ballsplayed % 6));// over balled
 
         printf("\n*%s:%d/%d",tbat->p[strike].name,tbat->p[strike].runs,tbat->p[strike].balls_faced);// on strike batsman
         printf("\n%s:%d/%d\n",tbat->p[non_strike].name,tbat->p[non_strike].runs,tbat->p[non_strike].balls_faced);// non striker batsman
@@ -175,7 +195,7 @@ void innings(int totalover, struct team *tbat, struct team *tball) {
         }
 
         // for illegal deliveries
-        if (balldec == 8) {
+        if (balldec == -1) {
             tbat->total_runs++;// update total runs
             tball->p[ballerNo].runs_given++;// update run given by baller
             tball->extras++;// update extra runs
@@ -202,11 +222,10 @@ void innings(int totalover, struct team *tbat, struct team *tball) {
         }
         system("cls");
 
-        if (target!=0 && tbat->total_runs>=target){
+        if (target!=1 && tbat->total_runs>=target){
 
                 break;
         }
-
 
 
         // over changed
@@ -315,12 +334,32 @@ void printMatchSummaryToTextFile(struct team *t1, struct team *t2, FILE *file) {
     fprintf(file, "-----------------------------------------------------------------\n");
 }
 
+void winner(){
+
+     FILE *file=fopen("match_summary.txt","a");
+    if(t1.total_runs>t2.total_runs){
+        printf("%s wins the match!!!\n",t1.team_name);
+        fprintf(file,"                     %s wins the match!!!\n",t1.team_name);
+    }
+    else if(t2.total_runs>t1.total_runs){
+        printf("%s wins the match!!!\n",t2.team_name);
+        fprintf(file,"                     %s wins the match!!!\n",t2.team_name);
+    }
+    else if(t1.total_runs=t2.total_runs){
+        printf("Match tie\n");
+    }
+    else{
+        printf("something went wrong :(");
+    }
+    fclose(file);
+}
+
 int main(){
     //welcome screen
     printf("*------------------------------------------------------*");
     printf("\n\t\tCRICKET SCORE SHEET\n");
     printf("*------------------------------------------------------*");
-    printf("\n!-------------Welcome to Cricket Score Sheet-----------");
+    printf("\n!-------------Welcome to Cricket Score Sheet-----------!");
     printf("\nA C program to keep record of your cricket match score..\n\nbuilt by:\nArun khadka\nPrabesh Phuyal\nSandesh Neupane");
     printf("\n\nPress any key to Create a Match !!\n");
     getch();
@@ -386,12 +425,14 @@ int main(){
     system("cls");
 
     // First innings
-    if (first_batting_team == 1)
+    if (first_batting_team == 1){
+        t1.toss++;
         innings(overs_to_play, &t1, &t2);
-
-    else
+    }
+    else{
+        t2.toss++;
         innings(overs_to_play, &t2, &t1);
-
+    }
     // inning break
     system("cls");
     printf("First Inning Ended, \nPress any key to continue Second Inning---> ");
@@ -412,9 +453,21 @@ int main(){
         return 1;
     }
 
-    printMatchSummaryToTextFile(&t1, &t2, file);
+    fprintf(file, "-----------------------SCORECARD---------------------------------\n");
+
+    if (t1.toss>t2.toss)
+        printMatchSummaryToTextFile(&t1, &t2, file);
+
+    if (t2.toss>t1.toss)
+        printMatchSummaryToTextFile(&t2, &t1, file);
+
     fclose(file);
-    printf("\nMATCH ENDED.....\nCheck 'match_summary.txt' for match Details\n");
+
+    winner();
+
+    printf("\nCheck 'match_summary.txt' for match Details\n");
+    getch();
 
     return 0;
 }
+
